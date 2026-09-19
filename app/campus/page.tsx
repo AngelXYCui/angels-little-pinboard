@@ -4,21 +4,36 @@ import { useEffect, useRef, useState } from "react";
 import Avatar from "../../components/Avatar";
 import { createClient } from "../../lib/supabase/client";
 
+type CampusUser = {
+  id: string;
+  username: string;
+  hair: string;
+  shirt: string;
+  skin_tone: string;
+  hairstyle: string;
+  campus_x: number;
+  campus_y: number;
+};
+
 export default function CampusPage() {
   const supabase = createClient();
   const mapRef = useRef<HTMLDivElement>(null);
 
+  const [userId, setUserId] = useState("");
+
+  const [username, setUsername] = useState("");
   const [hair, setHair] = useState("Brown");
   const [shirt, setShirt] = useState("Blue");
   const [skinTone, setSkinTone] = useState("Light");
   const [hairstyle, setHairstyle] = useState("Short");
 
-  // Default position: Low Rise 7
+  // Percentages of the campus map
   const [position, setPosition] = useState({
-    x: 900,
-    y: 120,
+    x: 85,
+    y: 15,
   });
 
+  const [otherUsers, setOtherUsers] = useState<CampusUser[]>([]);
   const [dragging, setDragging] = useState(false);
 
   const [dragOffset, setDragOffset] = useState({
@@ -28,9 +43,9 @@ export default function CampusPage() {
 
   const [loading, setLoading] = useState(true);
 
-  // Load avatar customization + saved campus position
+  // Load yourself + everyone else
   useEffect(() => {
-    async function loadCampusProfile() {
+    async function loadCampus() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -40,97 +55,157 @@ export default function CampusPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      setUserId(user.id);
+
+      const { data: myProfile, error: myError } = await supabase
         .from("profiles")
         .select(
-          "hair, shirt, skin_tone, hairstyle, campus_x, campus_y"
+          "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y"
         )
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.log(error);
+      if (myError) {
+        console.log(myError);
         setLoading(false);
         return;
       }
 
-      if (data) {
-        setHair(data.hair ?? "Brown");
-        setShirt(data.shirt ?? "Blue");
-        setSkinTone(data.skin_tone ?? "Light");
-        setHairstyle(data.hairstyle ?? "Short");
+      if (myProfile) {
+        setUsername(myProfile.username ?? "");
+        setHair(myProfile.hair ?? "Brown");
+        setShirt(myProfile.shirt ?? "Blue");
+        setSkinTone(myProfile.skin_tone ?? "Light");
+        setHairstyle(myProfile.hairstyle ?? "Short");
 
         setPosition({
-          x: data.campus_x ?? 900,
-          y: data.campus_y ?? 120,
+          x: myProfile.campus_x ?? 85,
+          y: myProfile.campus_y ?? 15,
         });
+      }
+
+      const { data: people, error: peopleError } = await supabase
+        .from("profiles")
+        .select(
+          "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y"
+        )
+        .neq("id", user.id);
+
+      if (peopleError) {
+        console.log(peopleError);
+      }
+
+      if (people) {
+        setOtherUsers(people);
       }
 
       setLoading(false);
     }
 
-    loadCampusProfile();
+    loadCampus();
   }, []);
 
-  // Start dragging
+  // Realtime updates from other users
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel("campus-users")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        (payload) => {
+          const updatedUser = payload.new as CampusUser;
+
+          if (updatedUser.id === userId) {
+            return;
+          }
+
+          setOtherUsers((currentUsers) => {
+            const alreadyExists = currentUsers.some(
+              (person) => person.id === updatedUser.id
+            );
+
+            if (alreadyExists) {
+              return currentUsers.map((person) =>
+                person.id === updatedUser.id
+                  ? {
+                      ...person,
+                      ...updatedUser,
+                    }
+                  : person
+              );
+            }
+
+            return [...currentUsers, updatedUser];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   function handlePointerDown(
     event: React.PointerEvent<HTMLDivElement>
   ) {
     const map = mapRef.current;
-
     if (!map) return;
 
     const mapRect = map.getBoundingClientRect();
 
+    // Current percentage position converted to pixels
+    const currentX = (position.x / 100) * mapRect.width;
+    const currentY = (position.y / 100) * mapRect.height;
+
     setDragging(true);
 
     setDragOffset({
-      x: event.clientX - mapRect.left - position.x,
-      y: event.clientY - mapRect.top - position.y,
+      x: event.clientX - mapRect.left - currentX,
+      y: event.clientY - mapRect.top - currentY,
     });
 
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
-  // Move avatar
   function handlePointerMove(
     event: React.PointerEvent<HTMLDivElement>
   ) {
     if (!dragging) return;
 
     const map = mapRef.current;
-
     if (!map) return;
 
     const mapRect = map.getBoundingClientRect();
 
-    const newX =
+    const pixelX =
       event.clientX -
       mapRect.left -
       dragOffset.x;
 
-    const newY =
+    const pixelY =
       event.clientY -
       mapRect.top -
       dragOffset.y;
 
-    const boundedX = Math.max(
-      0,
-      Math.min(mapRect.width - 95, newX)
-    );
+    const percentX =
+      (pixelX / mapRect.width) * 100;
 
-    const boundedY = Math.max(
-      0,
-      Math.min(mapRect.height - 130, newY)
-    );
+    const percentY =
+      (pixelY / mapRect.height) * 100;
 
     setPosition({
-      x: boundedX,
-      y: boundedY,
+      x: Math.max(0, Math.min(91, percentX)),
+      y: Math.max(0, Math.min(80, percentY)),
     });
   }
 
-  // Stop dragging + save position
   async function handlePointerUp() {
     if (!dragging) return;
 
@@ -267,7 +342,50 @@ export default function CampusPage() {
             </span>
           </button>
 
-          {/* Your draggable avatar */}
+          {/* Other people */}
+          {otherUsers.map((otherUser) => (
+            <div
+              key={otherUser.id}
+              className="pointer-events-none absolute z-10"
+              style={{
+                left: `${otherUser.campus_x ?? 85}%`,
+                top: `${otherUser.campus_y ?? 15}%`,
+                width: "95px",
+                height: "130px",
+              }}
+            >
+              <div
+                className="pointer-events-none"
+                style={{
+                  transform: "scale(0.45)",
+                  transformOrigin: "top left",
+                }}
+              >
+                <Avatar
+                  hair={otherUser.hair ?? "Brown"}
+                  shirt={otherUser.shirt ?? "Blue"}
+                  skinTone={otherUser.skin_tone ?? "Light"}
+                  hairstyle={otherUser.hairstyle ?? "Short"}
+                />
+              </div>
+
+              <div
+                className="
+                  absolute left-[47px] top-[112px]
+                  -translate-x-1/2
+                  whitespace-nowrap
+                  rounded-full bg-white/90
+                  px-2 py-1
+                  text-xs font-semibold text-[#806b67]
+                  shadow-sm
+                "
+              >
+                {otherUser.username}
+              </div>
+            </div>
+          ))}
+
+          {/* Your avatar */}
           <div
             className={`
               absolute z-20
@@ -279,8 +397,8 @@ export default function CampusPage() {
               }
             `}
             style={{
-              left: position.x,
-              top: position.y,
+              left: `${position.x}%`,
+              top: `${position.y}%`,
               width: "95px",
               height: "130px",
             }}
@@ -302,6 +420,22 @@ export default function CampusPage() {
                 skinTone={skinTone}
                 hairstyle={hairstyle}
               />
+            </div>
+
+            {/* Your username */}
+            <div
+              className="
+                pointer-events-none
+                absolute left-[47px] top-[112px]
+                -translate-x-1/2
+                whitespace-nowrap
+                rounded-full bg-white/90
+                px-2 py-1
+                text-xs font-semibold text-[#806b67]
+                shadow-sm
+              "
+            >
+              {username}
             </div>
           </div>
 
