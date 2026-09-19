@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Avatar from "./Avatar";
 import { createClient } from "../lib/supabase/client";
 
@@ -31,12 +32,15 @@ export default function DormLounge({
   dormName,
   loungeId,
 }: DormLoungeProps) {
-const [shouldAutoSpawn, setShouldAutoSpawn] = useState<boolean | null>(null);
-  useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  setShouldAutoSpawn(params.get("spawn") === "true");
-}, []);
-const [username, setUsername] = useState("");
+  const router = useRouter();
+
+  const [shouldAutoSpawn, setShouldAutoSpawn] =
+    useState<boolean | null>(null);
+
+  const [selectedUserId, setSelectedUserId] =
+    useState<string | null>(null);
+
+  const [username, setUsername] = useState("");
   const [hair, setHair] = useState("Brown");
   const [shirt, setShirt] = useState("Blue");
   const [skinTone, setSkinTone] = useState("Light");
@@ -47,22 +51,8 @@ const [username, setUsername] = useState("");
     y: 100,
   });
 
-  /*
-   * isPlaced:
-   *
-   * true = inside lounge, visible to everyone
-   * false = outside lounge, visible only to yourself
-   */
   const [isPlaced, setIsPlaced] = useState(false);
 
-  /*
-   * Where your avatar currently exists:
-   *
-   * "campus"
-   * "low-rise-6"
-   * "low-rise-7"
-   * null
-   */
   const [currentLocation, setCurrentLocation] = useState<
     string | null
   >(null);
@@ -76,7 +66,22 @@ const [username, setUsername] = useState("");
   const loungeRef = useRef<HTMLDivElement>(null);
 
   /*
-   * Load people who are PUBLICLY inside this lounge.
+   * Check whether we entered through
+   * a Campus building.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(
+      window.location.search
+    );
+
+    setShouldAutoSpawn(
+      params.get("spawn") === "true"
+    );
+  }, []);
+
+  /*
+   * Load everyone publicly visible
+   * inside this lounge.
    */
   async function loadLoungeUsers(
     currentUserId: string
@@ -103,20 +108,11 @@ const [username, setUsername] = useState("");
 
   /*
    * Load our profile.
-   *
-   * If ?spawn=true is in the URL, that means we
-   * entered by clicking the building on Campus.
-   *
-   * In that case, automatically move our avatar
-   * to the outside area of this lounge.
-   *
-   * Entering from the Navbar does NOT have
-   * ?spawn=true, so it does not move our avatar.
    */
   useEffect(() => {
-  if (shouldAutoSpawn === null) return;
+    if (shouldAutoSpawn === null) return;
 
-  async function loadUser() {
+    async function loadUser() {
       const {
         data: { user },
         error: userError,
@@ -160,9 +156,6 @@ const [username, setUsername] = useState("");
         data.hairstyle ?? "Short"
       );
 
-      /*
-       * Start with the location stored in Supabase.
-       */
       let effectiveLocation =
         data.current_location ?? null;
 
@@ -170,19 +163,15 @@ const [username, setUsername] = useState("");
         data.current_location === loungeId &&
         data.is_placed === true;
 
-      /*
-       * CAMPUS BUILDING ENTRY
-       *
-       * ?spawn=true means the user clicked the
-       * Low Rise building on the Campus map.
-       *
-       * If their avatar is not already at this
-       * lounge, move it here and place it outside.
-       */
-      if (
+      const isFreshAutoSpawn =
         shouldAutoSpawn &&
-        data.current_location !== loungeId
-      ) {
+        data.current_location !== loungeId;
+
+      /*
+       * Clicking a Campus building automatically
+       * moves the avatar to this lounge.
+       */
+      if (isFreshAutoSpawn) {
         const spawnX = 25;
         const spawnY = 185;
 
@@ -223,17 +212,13 @@ const [username, setUsername] = useState("");
       );
 
       /*
-       * Restore our position if our avatar
-       * already belongs to this lounge.
+       * Restore saved position.
        */
       if (
         effectiveLocation === loungeId
       ) {
         /*
-         * INSIDE
-         *
-         * Convert the saved percentage position
-         * back into page pixels.
+         * Inside lounge.
          */
         if (effectiveIsPlaced) {
           requestAnimationFrame(() => {
@@ -276,22 +261,9 @@ const [username, setUsername] = useState("");
         }
 
         /*
-         * OUTSIDE
-         *
-         * If this was NOT a fresh automatic spawn,
-         * restore our previously saved outside
-         * position.
-         *
-         * If it WAS a fresh spawn, we already set
-         * position to 25,185 above.
+         * Outside lounge.
          */
-        else if (
-          !(
-            shouldAutoSpawn &&
-            data.current_location !==
-              loungeId
-          )
-        ) {
+        else if (!isFreshAutoSpawn) {
           setPosition({
             x: data.outside_x ?? 25,
             y: data.outside_y ?? 185,
@@ -311,8 +283,6 @@ const [username, setUsername] = useState("");
 
   /*
    * REALTIME
-   *
-   * Watch everyone else's profile.
    */
   useEffect(() => {
     let channel:
@@ -333,10 +303,6 @@ const [username, setUsername] = useState("");
         return;
       }
 
-      /*
-       * Remove an old lounge channel for
-       * this user if one exists.
-       */
       const existingChannels =
         supabase.getChannels();
 
@@ -371,9 +337,6 @@ const [username, setUsername] = useState("");
             const updatedUser =
               payload.new as LoungeUser;
 
-            /*
-             * Ignore our own Realtime update.
-             */
             if (
               updatedUser.id === user.id
             ) {
@@ -382,28 +345,13 @@ const [username, setUsername] = useState("");
 
             setOtherUsers(
               (currentUsers) => {
-                /*
-                 * Someone is publicly visible
-                 * ONLY when:
-                 *
-                 * 1. Their current_location
-                 *    matches this lounge.
-                 *
-                 * 2. is_placed is true.
-                 */
                 const shouldBeVisible =
                   updatedUser.current_location ===
                     loungeId &&
                   updatedUser.is_placed ===
                     true;
 
-                /*
-                 * They moved somewhere else
-                 * or dragged outside.
-                 */
-                if (
-                  !shouldBeVisible
-                ) {
+                if (!shouldBeVisible) {
                   return currentUsers.filter(
                     (person) =>
                       person.id !==
@@ -414,40 +362,28 @@ const [username, setUsername] = useState("");
                 const updatedLoungeUser: LoungeUser =
                   {
                     id: updatedUser.id,
-
                     username:
                       updatedUser.username,
-
                     hair:
                       updatedUser.hair,
-
                     shirt:
                       updatedUser.shirt,
-
                     skin_tone:
                       updatedUser.skin_tone,
-
                     hairstyle:
                       updatedUser.hairstyle,
-
                     is_placed:
                       updatedUser.is_placed,
-
                     lounge_id:
                       updatedUser.lounge_id,
-
                     current_location:
                       updatedUser.current_location,
-
                     position_x:
                       updatedUser.position_x,
-
                     position_y:
                       updatedUser.position_y,
-
                     outside_x:
                       updatedUser.outside_x,
-
                     outside_y:
                       updatedUser.outside_y,
                   };
@@ -459,9 +395,7 @@ const [username, setUsername] = useState("");
                       updatedUser.id
                   );
 
-                if (
-                  alreadyExists
-                ) {
+                if (alreadyExists) {
                   return currentUsers.map(
                     (person) =>
                       person.id ===
@@ -497,10 +431,6 @@ const [username, setUsername] = useState("");
 
   /*
    * Manual Spawn button.
-   *
-   * This appears when someone visits through
-   * the Navbar and their avatar is somewhere
-   * else.
    */
   async function spawnOutsideLounge() {
     const {
@@ -587,8 +517,8 @@ const [username, setUsername] = useState("");
             loungeId
               ? "Your avatar is somewhere else right now."
               : isPlaced
-                ? "You're hanging out in the lounge! ♡"
-                : "You're outside the lounge — drag yourself in!")}
+                ? "You're in the lounge! ♡"
+                : "You don't want to hang out? :(")}
         </p>
 
         {/* Manual Spawn button */}
@@ -618,15 +548,24 @@ const [username, setUsername] = useState("");
           )}
 
         {/* Interactive Area */}
-        <div className="relative mt-7 h-[540px] w-full">
+        <div
+          className="relative mt-7 h-[540px] w-full"
+          onClick={() =>
+            setSelectedUserId(null)
+          }
+        >
 
-          {/* Your draggable avatar */}
+          {/* YOUR AVATAR */}
           {!loading &&
             currentLocation ===
               loungeId && (
               <div
                 className="
-                  absolute z-10
+                  group
+                  absolute
+                  z-20
+                  h-[105px]
+                  w-[90px]
                   cursor-grab
                   select-none
                   active:cursor-grabbing
@@ -640,6 +579,8 @@ const [username, setUsername] = useState("");
                 onPointerDown={(
                   event
                 ) => {
+                  event.stopPropagation();
+
                   const avatar =
                     event.currentTarget;
 
@@ -742,11 +683,6 @@ const [username, setUsername] = useState("");
                   const avatarRect =
                     avatar.getBoundingClientRect();
 
-                  /*
-                   * Convert avatar position
-                   * inside the lounge to
-                   * percentage coordinates.
-                   */
                   const rawLoungeX =
                     ((avatarRect.left -
                       loungeRect.left) /
@@ -777,11 +713,6 @@ const [username, setUsername] = useState("");
                       )
                     );
 
-                  /*
-                   * Determine whether the
-                   * pointer was released
-                   * inside the lounge.
-                   */
                   const droppedInside =
                     event.clientX >=
                       loungeRect.left &&
@@ -815,19 +746,28 @@ const [username, setUsername] = useState("");
                     return;
                   }
 
-                  /*
-                   * INSIDE:
-                   *
-                   * Publicly visible.
-                   * Save percentage position.
-                   *
-                   *
-                   * OUTSIDE:
-                   *
-                   * Still at this lounge.
-                   * Only visible to yourself.
-                   * Save pixel position.
-                   */
+                  const parent =
+                    avatar.parentElement;
+
+                  let outsideX =
+                    position.x;
+
+                  let outsideY =
+                    position.y;
+
+                  if (parent) {
+                    const parentRect =
+                      parent.getBoundingClientRect();
+
+                    outsideX =
+                      avatarRect.left -
+                      parentRect.left;
+
+                    outsideY =
+                      avatarRect.top -
+                      parentRect.top;
+                  }
+
                   const updateData =
                     droppedInside
                       ? {
@@ -857,10 +797,10 @@ const [username, setUsername] = useState("");
                             false,
 
                           outside_x:
-                            position.x,
+                            outsideX,
 
                           outside_y:
-                            position.y,
+                            outsideY,
                         };
 
                   const { error } =
@@ -884,7 +824,43 @@ const [username, setUsername] = useState("");
                   }
                 }}
               >
-                <div className="origin-top-left scale-50">
+                {/* Tiny YOU marker */}
+                <div
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-[52px]
+                    top-[-14px]
+                    z-30
+                    -translate-x-1/2
+                    whitespace-nowrap
+                    rounded-full
+                    bg-[#ffe4e9]
+                    px-2 py-0.5
+                    text-[9px]
+                    font-bold
+                    text-[#b87885]
+                    shadow-sm
+                  "
+                >
+                  you ♡
+                </div>
+
+                {/* Visible avatar */}
+                <div
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-0
+                    top-0
+                    origin-top-left
+                    scale-50
+                    transition
+                    duration-200
+                    group-hover:-translate-y-1
+                    group-hover:drop-shadow-[0_0_6px_rgba(243,161,173,0.65)]
+                  "
+                >
                   <Avatar
                     hair={hair}
                     shirt={shirt}
@@ -897,13 +873,30 @@ const [username, setUsername] = useState("");
                   />
                 </div>
 
-                <p className="absolute left-0 top-36 w-28 text-center font-bold">
+                {/* Username */}
+                <p
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-[52px]
+                    top-[115px]
+                    -translate-x-1/2
+                    whitespace-nowrap
+                    rounded-full
+                    bg-white/90
+                    px-2 py-1
+                    text-xs
+                    font-semibold
+                    text-[#806b67]
+                    shadow-sm
+                  "
+                >
                   {username}
                 </p>
               </div>
             )}
 
-          {/* Main Lounge */}
+          {/* MAIN LOUNGE */}
           <div
             ref={loungeRef}
             className="
@@ -922,43 +915,142 @@ const [username, setUsername] = useState("");
               </h2>
             </div>
 
-            {/* Other users */}
+            {/* OTHER USERS */}
             {otherUsers.map(
-              (otherUser) => (
-                <div
-                  key={
-                    otherUser.id
-                  }
-                  className="pointer-events-none absolute z-10"
-                  style={{
-                    left: `${otherUser.position_x}%`,
-                    top: `${otherUser.position_y}%`,
-                  }}
-                >
-                  <div className="origin-top-left scale-50">
-                    <Avatar
-                      hair={
-                        otherUser.hair
-                      }
-                      shirt={
-                        otherUser.shirt
-                      }
-                      skinTone={
-                        otherUser.skin_tone
-                      }
-                      hairstyle={
-                        otherUser.hairstyle
-                      }
-                    />
-                  </div>
+              (otherUser) => {
+                const isSelected =
+                  selectedUserId ===
+                  otherUser.id;
 
-                  <p className="absolute left-0 top-36 w-28 text-center font-bold text-black">
-                    {
-                      otherUser.username
+                return (
+                  <div
+                    key={
+                      otherUser.id
                     }
-                  </p>
-                </div>
-              )
+                    className="absolute z-10"
+                    style={{
+                      left: `${otherUser.position_x}%`,
+                      top: `${otherUser.position_y}%`,
+                    }}
+                  >
+                    {/*
+                     * Small interaction area.
+                     * Only this 90 x 105 box
+                     * responds to hover/click.
+                     */}
+                    <button
+                      type="button"
+                      onClick={(
+                        event
+                      ) => {
+                        event.stopPropagation();
+
+                        setSelectedUserId(
+                          isSelected
+                            ? null
+                            : otherUser.id
+                        );
+                      }}
+                      className="
+                        group
+                        relative
+                        block
+                        h-[105px]
+                        w-[90px]
+                        cursor-pointer
+                      "
+                    >
+                      <div
+                        className="
+                          pointer-events-none
+                          absolute
+                          left-0
+                          top-0
+                          origin-top-left
+                          scale-50
+                          transition
+                          duration-200
+                          group-hover:-translate-y-1
+                          group-hover:drop-shadow-md
+                        "
+                      >
+                        <Avatar
+                          hair={
+                            otherUser.hair
+                          }
+                          shirt={
+                            otherUser.shirt
+                          }
+                          skinTone={
+                            otherUser.skin_tone
+                          }
+                          hairstyle={
+                            otherUser.hairstyle
+                          }
+                        />
+                      </div>
+                    </button>
+
+                    {/* Username */}
+                    <p
+                      className="
+                        pointer-events-none
+                        absolute
+                        left-[52px]
+                        top-[115px]
+                        -translate-x-1/2
+                        whitespace-nowrap
+                        rounded-full
+                        bg-white/90
+                        px-2 py-1
+                        text-xs
+                        font-semibold
+                        text-[#806b67]
+                        shadow-sm
+                      "
+                    >
+                      {
+                        otherUser.username
+                      }
+                    </p>
+
+                    {/* Tiny profile button */}
+                    {isSelected && (
+                      <button
+                        type="button"
+                        onClick={(
+                          event
+                        ) => {
+                          event.stopPropagation();
+
+                          router.push(
+                            `/profile/${otherUser.id}`
+                          );
+                        }}
+                        className="
+                          absolute
+                          left-[53px]
+                          top-[142px]
+                          -translate-x-1/2
+                          whitespace-nowrap
+                          rounded-full
+                          border border-[#f0c7cf]
+                          bg-[#fffaf7]
+                          px-2 py-0.5
+                          text-[9px]
+                          font-bold
+                          text-[#b87885]
+                          shadow-sm
+                          transition
+                          hover:bg-[#ffe4e9]
+                        "
+                      >
+                        profile ♡
+                      </button>
+                    )}
+                  </div>
+                );
+              }
             )}
 
             {/* Ping Pong */}
