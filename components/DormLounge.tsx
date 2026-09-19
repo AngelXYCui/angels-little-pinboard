@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Avatar from "./Avatar";
 import { createClient } from "../lib/supabase/client";
 
@@ -32,12 +31,12 @@ export default function DormLounge({
   dormName,
   loungeId,
 }: DormLoungeProps) {
-  const searchParams = useSearchParams();
-
-  const shouldAutoSpawn =
-    searchParams.get("spawn") === "true";
-
-  const [username, setUsername] = useState("");
+const [shouldAutoSpawn, setShouldAutoSpawn] = useState<boolean | null>(null);
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  setShouldAutoSpawn(params.get("spawn") === "true");
+}, []);
+const [username, setUsername] = useState("");
   const [hair, setHair] = useState("Brown");
   const [shirt, setShirt] = useState("Blue");
   const [skinTone, setSkinTone] = useState("Light");
@@ -115,7 +114,9 @@ export default function DormLounge({
    * ?spawn=true, so it does not move our avatar.
    */
   useEffect(() => {
-    async function loadUser() {
+  if (shouldAutoSpawn === null) return;
+
+  async function loadUser() {
       const {
         data: { user },
         error: userError,
