@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Avatar from "../../components/Avatar";
 import { createClient } from "../../lib/supabase/client";
 
@@ -13,10 +14,12 @@ type CampusUser = {
   hairstyle: string;
   campus_x: number;
   campus_y: number;
+  current_location: string | null;
 };
 
 export default function CampusPage() {
   const supabase = createClient();
+  const router = useRouter();
   const mapRef = useRef<HTMLDivElement>(null);
 
   const [userId, setUserId] = useState("");
@@ -26,6 +29,10 @@ export default function CampusPage() {
   const [shirt, setShirt] = useState("Blue");
   const [skinTone, setSkinTone] = useState("Light");
   const [hairstyle, setHairstyle] = useState("Short");
+
+  const [currentLocation, setCurrentLocation] = useState<
+    string | null
+  >(null);
 
   // Percentages of the campus map
   const [position, setPosition] = useState({
@@ -43,7 +50,7 @@ export default function CampusPage() {
 
   const [loading, setLoading] = useState(true);
 
-  // Load yourself + everyone else
+  // Load yourself + everyone currently spawned on Campus
   useEffect(() => {
     async function loadCampus() {
       const {
@@ -60,7 +67,7 @@ export default function CampusPage() {
       const { data: myProfile, error: myError } = await supabase
         .from("profiles")
         .select(
-          "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y"
+          "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y, current_location"
         )
         .eq("id", user.id)
         .single();
@@ -77,6 +84,7 @@ export default function CampusPage() {
         setShirt(myProfile.shirt ?? "Blue");
         setSkinTone(myProfile.skin_tone ?? "Light");
         setHairstyle(myProfile.hairstyle ?? "Short");
+        setCurrentLocation(myProfile.current_location ?? null);
 
         setPosition({
           x: myProfile.campus_x ?? 85,
@@ -84,12 +92,14 @@ export default function CampusPage() {
         });
       }
 
-      const { data: people, error: peopleError } = await supabase
-        .from("profiles")
-        .select(
-          "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y"
-        )
-        .neq("id", user.id);
+      const { data: people, error: peopleError } =
+        await supabase
+          .from("profiles")
+          .select(
+            "id, username, hair, shirt, skin_tone, hairstyle, campus_x, campus_y, current_location"
+          )
+          .eq("current_location", "campus")
+          .neq("id", user.id);
 
       if (peopleError) {
         console.log(peopleError);
@@ -126,6 +136,14 @@ export default function CampusPage() {
           }
 
           setOtherUsers((currentUsers) => {
+            // If this person is no longer on Campus,
+            // remove them from the Campus map.
+            if (updatedUser.current_location !== "campus") {
+              return currentUsers.filter(
+                (person) => person.id !== updatedUser.id
+              );
+            }
+
             const alreadyExists = currentUsers.some(
               (person) => person.id === updatedUser.id
             );
@@ -141,6 +159,7 @@ export default function CampusPage() {
               );
             }
 
+            // They just spawned onto Campus.
             return [...currentUsers, updatedUser];
           });
         }
@@ -151,6 +170,25 @@ export default function CampusPage() {
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  // Spawn your avatar on Campus
+  async function spawnOnCampus() {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        current_location: "campus",
+      })
+      .eq("id", userId);
+
+    if (error) {
+      console.log("Couldn't spawn avatar:", error);
+      return;
+    }
+
+    setCurrentLocation("campus");
+  }
 
   function handlePointerDown(
     event: React.PointerEvent<HTMLDivElement>
@@ -222,6 +260,7 @@ export default function CampusPage() {
       .update({
         campus_x: position.x,
         campus_y: position.y,
+        current_location: "campus",
       })
       .eq("id", user.id);
 
@@ -255,8 +294,30 @@ export default function CampusPage() {
           </h1>
 
           <p className="mt-2 text-[#a18a82]">
-            Drag yourself somewhere on campus ♡
+            {currentLocation === "campus"
+              ? "Drag yourself somewhere on campus ♡"
+              : "Your avatar is currently somewhere else ♡"}
           </p>
+
+          {currentLocation !== "campus" && (
+            <button
+              type="button"
+              onClick={spawnOnCampus}
+              className="
+                mt-4 rounded-full
+                border-2 border-[#f0c7cf]
+                bg-[#ffe4e9]
+                px-6 py-2
+                font-bold text-[#b87885]
+                shadow-sm
+                transition
+                hover:-translate-y-0.5
+                hover:shadow-md
+              "
+            >
+              ♡ Spawn Avatar
+            </button>
+          )}
         </div>
 
         {/* Campus map */}
@@ -289,36 +350,95 @@ export default function CampusPage() {
           </button>
 
           {/* Low Rise 6 */}
-          <button
-            type="button"
-            className="
-              absolute left-[55%] top-[8%]
-              h-32 w-48
-              rounded-[28px]
-              border-4 border-white
-              bg-[#e4f2fb]
-              font-bold text-[#6f5c56]
-              shadow-md
-            "
-          >
-            Low Rise 6
-          </button>
+<button
+  type="button"
+  onClick={() =>
+  router.push("/dorm/low-rise-6?spawn=true")
+}
 
-          {/* Low Rise 7 */}
-          <button
-            type="button"
-            className="
-              absolute right-[7%] top-[13%]
-              h-36 w-48
-              rounded-[28px]
-              border-4 border-white
-              bg-[#e8dff5]
-              font-bold text-[#6f5c56]
-              shadow-md
-            "
-          >
-            Low Rise 7
-          </button>
+  className="
+    group
+    absolute left-[55%] top-[8%]
+    h-32 w-48
+    cursor-pointer
+    rounded-[28px]
+    border-4 border-white
+    bg-[#e4f2fb]
+    font-bold text-[#6f5c56]
+    shadow-md
+    transition-all duration-200
+    hover:-translate-y-2
+    hover:scale-[1.03]
+    hover:border-[#c5dfef]
+    hover:bg-[#d9edf9]
+    hover:shadow-xl
+    active:translate-y-0
+    active:scale-[0.98]
+  "
+>
+  <span className="block transition-transform duration-200 group-hover:-translate-y-1">
+    Low Rise 6
+  </span>
+
+  <span
+    className="
+      mt-1 block
+      text-xs font-semibold
+      text-[#7896a8]
+      opacity-0
+      transition-all duration-200
+      group-hover:translate-y-0
+      group-hover:opacity-100
+    "
+  >
+    Enter ♡
+  </span>
+</button>
+
+{/* Low Rise 7 */}
+<button
+  type="button"
+  onClick={() =>
+  router.push("/dorm/low-rise-7?spawn=true")
+}
+  className="
+    group
+    absolute right-[7%] top-[13%]
+    h-36 w-48
+    cursor-pointer
+    rounded-[28px]
+    border-4 border-white
+    bg-[#e8dff5]
+    font-bold text-[#6f5c56]
+    shadow-md
+    transition-all duration-200
+    hover:-translate-y-2
+    hover:scale-[1.03]
+    hover:border-[#d9caed]
+    hover:bg-[#dfd3f0]
+    hover:shadow-xl
+    active:translate-y-0
+    active:scale-[0.98]
+  "
+>
+  <span className="block transition-transform duration-200 group-hover:-translate-y-1">
+    Low Rise 7
+  </span>
+
+  <span
+    className="
+      mt-1 block
+      text-xs font-semibold
+      text-[#8d79a6]
+      opacity-0
+      transition-all duration-200
+      group-hover:translate-y-0
+      group-hover:opacity-100
+    "
+  >
+    Enter ♡
+  </span>
+</button>
 
           {/* North Star / Appel */}
           <button
@@ -342,7 +462,7 @@ export default function CampusPage() {
             </span>
           </button>
 
-          {/* Other people */}
+          {/* Other people currently spawned on Campus */}
           {otherUsers.map((otherUser) => (
             <div
               key={otherUser.id}
@@ -385,59 +505,61 @@ export default function CampusPage() {
             </div>
           ))}
 
-          {/* Your avatar */}
-          <div
-            className={`
-              absolute z-20
-              touch-none select-none
-              ${
-                dragging
-                  ? "cursor-grabbing"
-                  : "cursor-grab"
-              }
-            `}
-            style={{
-              left: `${position.x}%`,
-              top: `${position.y}%`,
-              width: "95px",
-              height: "130px",
-            }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-          >
+          {/* Your avatar - ONLY visible if spawned on Campus */}
+          {currentLocation === "campus" && (
             <div
-              className="pointer-events-none"
+              className={`
+                absolute z-20
+                touch-none select-none
+                ${
+                  dragging
+                    ? "cursor-grabbing"
+                    : "cursor-grab"
+                }
+              `}
               style={{
-                transform: "scale(0.45)",
-                transformOrigin: "top left",
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+                width: "95px",
+                height: "130px",
               }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
-              <Avatar
-                hair={hair}
-                shirt={shirt}
-                skinTone={skinTone}
-                hairstyle={hairstyle}
-              />
-            </div>
+              <div
+                className="pointer-events-none"
+                style={{
+                  transform: "scale(0.45)",
+                  transformOrigin: "top left",
+                }}
+              >
+                <Avatar
+                  hair={hair}
+                  shirt={shirt}
+                  skinTone={skinTone}
+                  hairstyle={hairstyle}
+                />
+              </div>
 
-            {/* Your username */}
-            <div
-              className="
-                pointer-events-none
-                absolute left-[47px] top-[112px]
-                -translate-x-1/2
-                whitespace-nowrap
-                rounded-full bg-white/90
-                px-2 py-1
-                text-xs font-semibold text-[#806b67]
-                shadow-sm
-              "
-            >
-              {username}
+              {/* Your username */}
+              <div
+                className="
+                  pointer-events-none
+                  absolute left-[47px] top-[112px]
+                  -translate-x-1/2
+                  whitespace-nowrap
+                  rounded-full bg-white/90
+                  px-2 py-1
+                  text-xs font-semibold text-[#806b67]
+                  shadow-sm
+                "
+              >
+                {username}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Map label */}
           <div
@@ -453,7 +575,6 @@ export default function CampusPage() {
           >
             North Campus · Cornell University
           </div>
-
         </div>
       </div>
     </main>
