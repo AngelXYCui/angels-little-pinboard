@@ -33,7 +33,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // Put the database information into our React state
     setUsername(data.username ?? "");
     setMajor(data.major ?? "");
     setYear(data.year ?? "");

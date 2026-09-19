@@ -120,7 +120,7 @@ if (loading) {
         <h2 className="mb-3 font-bold text-[#806b67]">Shirt Color</h2>
 
         <div className="flex flex-wrap gap-3">
-            {["Blue", "Red", "Green"].map((color) => (
+            {["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"].map((color) => (
             <button
                 key={color}
                 type="button"
