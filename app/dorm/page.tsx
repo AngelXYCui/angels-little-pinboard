@@ -85,29 +85,31 @@ useEffect(() => {
     } else {
     requestAnimationFrame(() => {
         const lounge = loungeRef.current;
-
         if (!lounge) return;
 
-        const loungeRect = lounge.getBoundingClientRect();
         const parent = lounge.parentElement;
-
         if (!parent) return;
 
+        const loungeRect = lounge.getBoundingClientRect();
         const parentRect = parent.getBoundingClientRect();
+
+        const savedX = data.position_x ?? 50;
+        const savedY = data.position_y ?? 50;
 
         setPosition({
         x:
             loungeRect.left -
             parentRect.left +
-            ((data.position_x ?? 0) / 100) * loungeRect.width,
+            (savedX / 100) * loungeRect.width,
 
         y:
             loungeRect.top -
             parentRect.top +
-            ((data.position_y ?? 0) / 100) * loungeRect.height,
+            (savedY / 100) * loungeRect.height,
         });
     });
     }
+    
 
 
     await loadLoungeUsers(user.id);
@@ -304,11 +306,15 @@ useEffect(() => {
             const loungeRect = lounge.getBoundingClientRect();
             const avatarRect = avatar.getBoundingClientRect();
 
-            const loungeX =
+            const rawLoungeX =
             ((avatarRect.left - loungeRect.left) / loungeRect.width) * 100;
 
-            const loungeY =
+            const rawLoungeY =
             ((avatarRect.top - loungeRect.top) / loungeRect.height) * 100;
+
+            // Keep placed avatars inside the lounge
+            const loungeX = Math.max(0, Math.min(88, rawLoungeX));
+            const loungeY = Math.max(0, Math.min(74, rawLoungeY));
 
             const droppedInside =
                 event.clientX >= loungeRect.left &&
@@ -356,7 +362,7 @@ useEffect(() => {
           
           <div
             ref={loungeRef}
-            className="absolute bottom-0 right-0 h-[560px] w-[85%] overflow-hidden rounded-[32px] border-4 border-[#e8cfc7] bg-[#fff7ed] shadow-xl"          >
+            className="absolute bottom-0 right-0 h-[560px] w-[85%] rounded-[32px] border-4 border-[#e8cfc7] bg-[#fff7ed] shadow-xl"          >
 
             <div className="absolute left-1/2 top-5 -translate-x-1/2">
               <h2 className="text-2xl font-bold text-black">
@@ -367,7 +373,7 @@ useEffect(() => {
             {otherUsers.map((otherUser) => (
             <div
                 key={otherUser.id}
-                className="absolute z-10"
+                className="pointer-events-none absolute z-10"
                 style={{
                 left: `${otherUser.position_x}%`,
                 top: `${otherUser.position_y}%`,
