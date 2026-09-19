@@ -45,7 +45,6 @@ export default function AvatarCreator() {
 
   loadAvatar();
 }, []);
-
 async function handleSave() {
   const {
     data: { user },
@@ -59,10 +58,10 @@ async function handleSave() {
   const { error } = await supabase
     .from("profiles")
     .update({
-    hair,
-    shirt,
-    skin_tone: skinTone,
-    hairstyle,
+      hair,
+      shirt,
+      skin_tone: skinTone,
+      hairstyle,
     })
     .eq("id", user.id);
 
@@ -72,15 +71,6 @@ async function handleSave() {
   }
 
   alert("Avatar saved!");
-}
-if (loading) {
-  return (
-    <main className="min-h-screen p-10">
-      <p className="font-semibold text-[#a18a82]">
-        Loading your avatar... ♡
-      </p>
-    </main>
-  );
 }
   return (
     <main className="min-h-screen p-10">

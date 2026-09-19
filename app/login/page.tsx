@@ -10,23 +10,34 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
 
   async function signUp() {
-    setMessage("Creating account...");
+  setMessage("Creating account...");
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setMessage("Account created! Check your email to confirm your account.");
+  if (!username.trim()) {
+    setMessage("Please choose a username.");
+    return;
   }
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        username: username.trim(),
+      },
+    },
+  });
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  setMessage("Account created! ♡");
+}
 
   async function logIn() {
     setMessage("Logging in...");
@@ -57,7 +68,17 @@ export default function LoginPage() {
         <p className="mt-2 text-gray-500">
           Create an account or log in.
         </p>
+        <div>
+        <label className="mb-2 block font-bold">Username</label>
 
+        <input
+          type="text"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          placeholder="Choose a username"
+          className="w-full rounded border p-3"
+        />
+      </div>
         <div className="mt-10 flex flex-col gap-5">
           <div>
             <label className="mb-2 block font-bold">Email</label>
