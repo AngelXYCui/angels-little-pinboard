@@ -49,7 +49,10 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen p-10">
       <div className="mx-auto max-w-md">
-        <h1 className="text-4xl font-bold">Virtual Campus</h1>
+        <h1 className="text-center text-3xl font-bold text-[#806b67]">
+        angel&apos;s little ♡
+        <span className="block text-[#f19aaa]">PINBOARD</span>
+        </h1>
 
         <p className="mt-2 text-gray-500">
           Create an account or log in.
