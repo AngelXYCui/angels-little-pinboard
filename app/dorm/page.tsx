@@ -338,7 +338,7 @@ useEffect(() => {
             ))}
             {/* Ping pong area */}
             <div className="absolute left-[3%] top-[5%] h-[32%] w-[36%] rounded-3xl border-2 border-[#b9d9c2] bg-[#e8f5e9] shadow-sm">
-            <p className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e8f5e9] px-3 py-1 font-bold text-[#78947f]">
+            <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e8f5e9] px-3 py-1 font-bold text-[#78947f]">
             Ping Pong
             </p>
             </div>
