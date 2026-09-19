@@ -81,6 +81,12 @@ useEffect(() => {
         {!loading && loggedIn && (
           <>
             <Link
+              href="/campus"
+              className="rounded-full border border-pink-100 bg-[#fff0f2] px-5 py-2.5 text-sm font-semibold text-[#806b67] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#ffe4e8] hover:shadow-md"
+            >
+              ♡ Campus
+            </Link>
+            <Link
               href="/dorm"
               className="rounded-full border border-pink-100 bg-[#fff0f2] px-5 py-2.5 text-sm font-semibold text-[#806b67] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#ffe4e8] hover:shadow-md"
             >
