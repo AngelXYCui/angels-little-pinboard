@@ -203,7 +203,13 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+              <Link
+                href="/leaderboard"
+                className="rounded-full border border-green-100 bg-[#edf8ef] px-5 py-2.5 text-sm font-semibold text-[#806b67] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#e0f3e4] hover:shadow-md"
 
+              >
+                ♡ Leaderboard
+              </Link>
               {/* Profile */}
               <Link
                 href="/profile"

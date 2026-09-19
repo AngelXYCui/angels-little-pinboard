@@ -175,6 +175,20 @@ export default function DormLounge({
         const spawnX = 25;
         const spawnY = 185;
 
+        /*
+        * Finish any previous lounge session
+        * before moving locations.
+        */
+        const { error: timerError } =
+            await supabase.rpc("stop_lounge_time");
+
+        if (timerError) {
+            console.log(
+            "Could not stop previous lounge timer:",
+            timerError
+            );
+        }
+
         const { error: spawnError } =
           await supabase
             .from("profiles")
@@ -439,7 +453,19 @@ export default function DormLounge({
       await supabase.auth.getUser();
 
     if (!user) return;
+    /*
+    * If a lounge timer is currently running,
+    * finish that session before moving.
+    */
+    const { error: timerError } =
+    await supabase.rpc("stop_lounge_time");
 
+    if (timerError) {
+    console.log(
+        "Could not stop previous lounge timer:",
+        timerError
+    );
+    }
     const spawnX = 25;
     const spawnY = 185;
 
@@ -723,9 +749,42 @@ export default function DormLounge({
                     event.clientY <=
                       loungeRect.bottom;
 
-                  setIsPlaced(
-                    droppedInside
-                  );
+                  const wasPlaced = isPlaced;
+
+                    setIsPlaced(droppedInside);
+
+                    /*
+                    * LOUNGE TIME
+                    *
+                    * Start timer only when crossing
+                    * from outside -> inside.
+                    *
+                    * Stop timer only when crossing
+                    * from inside -> outside.
+                    */
+                    if (droppedInside && !wasPlaced) {
+                    const { error: timerError } =
+                        await supabase.rpc("start_lounge_time");
+
+                    if (timerError) {
+                        console.log(
+                        "Could not start lounge timer:",
+                        timerError
+                        );
+                    }
+                    }
+
+                    if (!droppedInside && wasPlaced) {
+                    const { error: timerError } =
+                        await supabase.rpc("stop_lounge_time");
+
+                    if (timerError) {
+                        console.log(
+                        "Could not stop lounge timer:",
+                        timerError
+                        );
+                    }
+                    }
 
                   if (
                     avatar.hasPointerCapture(

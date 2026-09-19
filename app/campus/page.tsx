@@ -173,22 +173,45 @@ export default function CampusPage() {
 
   // Spawn your avatar on Campus
   async function spawnOnCampus() {
-    if (!userId) return;
+  if (!userId) return;
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        current_location: "campus",
-      })
-      .eq("id", userId);
+  /*
+   * LOUNGE TIME
+   *
+   * If the user was previously inside a lounge,
+   * finish that lounge session before moving
+   * them onto Campus.
+   *
+   * If no timer is running, the database
+   * function simply does nothing.
+   */
+  const { error: timerError } =
+    await supabase.rpc("stop_lounge_time");
 
-    if (error) {
-      console.log("Couldn't spawn avatar:", error);
-      return;
-    }
-
-    setCurrentLocation("campus");
+  if (timerError) {
+    console.log(
+      "Couldn't stop lounge timer:",
+      timerError
+    );
   }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      current_location: "campus",
+    })
+    .eq("id", userId);
+
+  if (error) {
+    console.log(
+      "Couldn't spawn avatar:",
+      error
+    );
+    return;
+  }
+
+  setCurrentLocation("campus");
+}
 
   function handlePointerDown(
     event: React.PointerEvent<HTMLDivElement>
@@ -352,10 +375,7 @@ export default function CampusPage() {
           {/* Low Rise 6 */}
 <button
   type="button"
-  onClick={() =>
-  router.push("/dorm/low-rise-6?spawn=true")
-}
-
+  onClick={() => router.push("/dorm/low-rise-6")}
   className="
     group
     absolute left-[55%] top-[8%]
