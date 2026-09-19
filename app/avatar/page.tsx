@@ -156,7 +156,7 @@ if (loading) {
   <h2 className="mb-3 font-bold text-[#806b67]">Hairstyle</h2>
 
     <div className="flex flex-wrap gap-3">
-        {["Short", "Braids", "Long", "Ponytail", "Buns"].map((style) => (
+        {["Short", "Braids", "Long", "Ponytail", "Buns", "Ahoge"].map((style) => (
         <button
             key={style}
             type="button"

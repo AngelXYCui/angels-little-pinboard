@@ -17,6 +17,7 @@ export default function Avatar({
     Long: "long",
     Ponytail: "ponytail",
     Buns: "buns",
+    Ahoge: "ahoge",
   };
 
   const hairFilters: Record<string, string> = {
@@ -78,6 +79,11 @@ const shirtFilter = shirtFilters[shirt] ?? shirtFilters.Blue;
     Buns: {
       width: "113%",
       top: "-20px",
+      left: "50%",
+    },
+    Ahoge: {
+      width: "100%",
+      top: "-40px",
       left: "50%",
     },
   };
