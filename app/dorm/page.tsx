@@ -60,7 +60,7 @@ useEffect(() => {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "username, hair, shirt, is_placed, position_x, position_y"
+         "username, hair, shirt, is_placed, position_x, position_y, outside_x, outside_y"
       )
       .eq("id", user.id)
       .single();
@@ -79,10 +79,11 @@ useEffect(() => {
 
     if (!data.is_placed) {
     setPosition({
-        x: 40,
-        y: 100,
+        x: data.outside_x ?? 40,
+        y: data.outside_y ?? 100,
     });
-    } else {
+    }
+    else {
     requestAnimationFrame(() => {
         const lounge = loungeRef.current;
         if (!lounge) return;
@@ -333,18 +334,26 @@ useEffect(() => {
             } = await supabase.auth.getUser();
 
             if (user) {
-                const { error } = await supabase
+            const updateData = droppedInside
+                ? {
+                    is_placed: true,
+                    position_x: loungeX,
+                    position_y: loungeY,
+                }
+                : {
+                    is_placed: false,
+                    outside_x: position.x,
+                    outside_y: position.y,
+                };
+
+            const { error } = await supabase
                 .from("profiles")
-                .update({
-                is_placed: droppedInside,
-                position_x: loungeX,
-                position_y: loungeY,
-                })
+                .update(updateData)
                 .eq("id", user.id);
 
-                if (error) {
+            if (error) {
                 console.log(error);
-                }
+            }
             }
             }}
             >
