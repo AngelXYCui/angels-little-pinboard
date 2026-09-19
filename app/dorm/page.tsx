@@ -99,11 +99,12 @@ useEffect(() => {
         x:
             loungeRect.left -
             parentRect.left +
-            (data.position_x ?? 0),
+            ((data.position_x ?? 0) / 100) * loungeRect.width,
+
         y:
             loungeRect.top -
             parentRect.top +
-            (data.position_y ?? 0),
+            ((data.position_y ?? 0) / 100) * loungeRect.height,
         });
     });
     }
@@ -254,39 +255,38 @@ useEffect(() => {
             }}
             onPointerDown={(event) => {
                 const avatar = event.currentTarget;
-                const parent = avatar.parentElement;
-
-                if (!parent) return;
 
                 avatar.setPointerCapture(event.pointerId);
 
-                const parentRect = parent.getBoundingClientRect();
                 const avatarRect = avatar.getBoundingClientRect();
 
-                const offsetX = event.clientX - avatarRect.left;
-                const offsetY = event.clientY - avatarRect.top;
+                avatar.dataset.offsetX = (
+                    event.clientX - avatarRect.left
+                ).toString();
 
-                avatar.dataset.offsetX = offsetX.toString();
-                avatar.dataset.offsetY = offsetY.toString();
-                avatar.dataset.parentLeft = parentRect.left.toString();
-                avatar.dataset.parentTop = parentRect.top.toString();
-            }}
+                avatar.dataset.offsetY = (
+                    event.clientY - avatarRect.top
+                ).toString();
+                }}
             onPointerMove={(event) => {
-                const avatar = event.currentTarget;
+            const avatar = event.currentTarget;
 
-                if (!avatar.hasPointerCapture(event.pointerId)) {
+            if (!avatar.hasPointerCapture(event.pointerId)) {
                 return;
-                }
+            }
 
-                const offsetX = Number(avatar.dataset.offsetX);
-                const offsetY = Number(avatar.dataset.offsetY);
-                const parentLeft = Number(avatar.dataset.parentLeft);
-                const parentTop = Number(avatar.dataset.parentTop);
+            const parent = avatar.parentElement;
+            if (!parent) return;
 
-                setPosition({
-                x: event.clientX - parentLeft - offsetX,
-                y: event.clientY - parentTop - offsetY,
-                });
+            const parentRect = parent.getBoundingClientRect();
+
+            const offsetX = Number(avatar.dataset.offsetX);
+            const offsetY = Number(avatar.dataset.offsetY);
+
+            setPosition({
+                x: event.clientX - parentRect.left - offsetX,
+                y: event.clientY - parentRect.top - offsetY,
+            });
             }}
             onPointerUp={async (event) => {
             const avatar = event.currentTarget;
@@ -304,8 +304,11 @@ useEffect(() => {
             const loungeRect = lounge.getBoundingClientRect();
             const avatarRect = avatar.getBoundingClientRect();
 
-            const loungeX = avatarRect.left - loungeRect.left;
-            const loungeY = avatarRect.top - loungeRect.top;
+            const loungeX =
+            ((avatarRect.left - loungeRect.left) / loungeRect.width) * 100;
+
+            const loungeY =
+            ((avatarRect.top - loungeRect.top) / loungeRect.height) * 100;
 
             const droppedInside =
                 event.clientX >= loungeRect.left &&
@@ -315,12 +318,10 @@ useEffect(() => {
 
             setIsPlaced(droppedInside);
 
-            // Release the pointer immediately
             if (avatar.hasPointerCapture(pointerId)) {
                 avatar.releasePointerCapture(pointerId);
             }
 
-            // Then save to Supabase
             const {
                 data: { user },
             } = await supabase.auth.getUser();
@@ -368,8 +369,8 @@ useEffect(() => {
                 key={otherUser.id}
                 className="absolute z-10"
                 style={{
-                left: otherUser.position_x,
-                top: otherUser.position_y,
+                left: `${otherUser.position_x}%`,
+                top: `${otherUser.position_y}%`,
                 }}
             >
                 <div className="origin-top-left scale-50">
