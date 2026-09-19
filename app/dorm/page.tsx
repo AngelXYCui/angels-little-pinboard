@@ -126,7 +126,7 @@ useEffect(() => {
 
     if (!user || cancelled) return;
 
-    // Make sure an old development subscription is gone first
+    // Remove an old subscription if one exists
     const existingChannels = supabase.getChannels();
 
     for (const existingChannel of existingChannels) {
@@ -142,13 +142,61 @@ useEffect(() => {
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
           table: "profiles",
         },
         (payload) => {
-        console.log("REALTIME PROFILE CHANGE:", payload);
-        loadLoungeUsers(user.id);
+          console.log("REALTIME UPDATE:", payload);
+          const updatedUser = payload.new as LoungeUser & {
+            is_placed: boolean;
+          };
+
+          // Don't add our own avatar to otherUsers
+          if (updatedUser.id === user.id) return;
+
+          setOtherUsers((currentUsers) => {
+            // If they left the lounge, remove them
+            if (!updatedUser.is_placed) {
+              return currentUsers.filter(
+                (person) => person.id !== updatedUser.id
+              );
+            }
+
+            // Check whether they're already visible
+            const alreadyExists = currentUsers.some(
+              (person) => person.id === updatedUser.id
+            );
+
+            // If they already exist, update only that avatar
+            if (alreadyExists) {
+              return currentUsers.map((person) =>
+                person.id === updatedUser.id
+                  ? {
+                      id: updatedUser.id,
+                      username: updatedUser.username,
+                      hair: updatedUser.hair,
+                      shirt: updatedUser.shirt,
+                      position_x: updatedUser.position_x,
+                      position_y: updatedUser.position_y,
+                    }
+                  : person
+              );
+            }
+
+            // Otherwise, they just entered the lounge
+            return [
+              ...currentUsers,
+              {
+                id: updatedUser.id,
+                username: updatedUser.username,
+                hair: updatedUser.hair,
+                shirt: updatedUser.shirt,
+                position_x: updatedUser.position_x,
+                position_y: updatedUser.position_y,
+              },
+            ];
+          });
         }
       )
       .subscribe((status) => {
