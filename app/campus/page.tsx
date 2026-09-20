@@ -178,12 +178,6 @@ export default function CampusPage() {
   /*
    * LOUNGE TIME
    *
-   * If the user was previously inside a lounge,
-   * finish that lounge session before moving
-   * them onto Campus.
-   *
-   * If no timer is running, the database
-   * function simply does nothing.
    */
   const { error: timerError } =
     await supabase.rpc("stop_lounge_time");

@@ -1164,7 +1164,7 @@ export default function DormLounge({
             </div>
 
             {/* Bottom door */}
-            <div className="absolute bottom-0 left-[35%] h-4 w-[10%] rounded-t-lg bg-[#e8cfc7]" />
+            <div className="absolute bottom-0 left-[46%] h-4 w-[10%] rounded-t-lg bg-[#e8cfc7]" />
 
             {/* TV */}
             <div className="absolute bottom-[3%] right-[8%] h-[5%] w-[34%] rounded-lg bg-[#8b7b76] shadow-sm">

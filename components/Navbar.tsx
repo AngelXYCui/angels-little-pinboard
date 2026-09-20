@@ -179,7 +179,7 @@ export default function Navbar() {
                           hover:bg-[#f2efff]
                         "
                       >
-                        ♡ Low Rise 6 Lounge
+                        ♡ Low Rise 6
                       </Link>
 
                       {/* Low Rise 7 */}
@@ -196,7 +196,7 @@ export default function Navbar() {
                           hover:bg-[#edf8ef]
                         "
                       >
-                        ♡ Low Rise 7 Lounge
+                        ♡ Low Rise 7
                       </Link>
 
                     </div>

@@ -75,7 +75,7 @@ export default function PublicProfilePage() {
         <div className="rounded-[32px] border-2 border-[#f3d8dd] bg-[#fffaf7] p-8 shadow-md">
 
           <div className="flex flex-col items-center">
-            <div className="origin-top scale-90">
+            <div className="origin-top scale-75">
               <Avatar
                 hair={profile.hair ?? "Brown"}
                 shirt={profile.shirt ?? "Blue"}
