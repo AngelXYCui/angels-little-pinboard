@@ -23,6 +23,8 @@ export default function Navbar() {
 
   const campusMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [navVisible, setNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     async function checkUser() {
@@ -83,7 +85,36 @@ export default function Navbar() {
       );
     };
   }, []);
+  useEffect(() => {
+  function handleScroll() {
+    const currentScrollY = window.scrollY;
 
+    // Always show navbar near the top
+    if (currentScrollY < 20) {
+      setNavVisible(true);
+    }
+    // Scrolling down -> hide
+    else if (currentScrollY > lastScrollY.current) {
+      setNavVisible(false);
+      setMobileOpen(false);
+      setMobileCampusOpen(false);
+    }
+    // Scrolling up -> show
+    else {
+      setNavVisible(true);
+    }
+
+    lastScrollY.current = currentScrollY;
+  }
+
+  window.addEventListener("scroll", handleScroll, {
+    passive: true,
+  });
+
+  return () => {
+    window.removeEventListener("scroll", handleScroll);
+  };
+}, []);
   async function handleLogout() {
     await supabase.auth.signOut();
 
@@ -100,8 +131,11 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b-2 border-pink-100 bg-[#fffaf7]/95 shadow-sm backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+<nav
+  className={`sticky top-0 z-50 border-b-2 border-pink-100 bg-[#fffaf7]/95 shadow-sm backdrop-blur-md transition-transform duration-300 ${
+    navVisible ? "translate-y-0" : "-translate-y-full"
+  }`}
+>      <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-1.5 sm:px-6 sm:py-4">
         {/* Logo */}
         <Link
           href="/"
@@ -109,12 +143,12 @@ export default function Navbar() {
           onClick={closeMobileMenu}
         >
           {/* Little pinned note */}
-          <div className="relative flex h-10 w-10 rotate-[-4deg] items-center justify-center rounded-lg border-2 border-[#e8d7c8] bg-[#fffdf8] shadow-sm transition group-hover:rotate-0 sm:h-12 sm:w-12">
-            <span className="text-lg sm:text-xl">
+          <div className="relative flex h-8 w-8 rotate-[-4deg] items-center justify-center rounded-lg border-2 border-[#e8d7c8] bg-[#fffdf8] shadow-sm transition group-hover:rotate-0 sm:h-12 sm:w-12">
+            <span className="text-sm sm:text-xl">
               ☺
             </span>
 
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg sm:text-xl">
+            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-sm sm:-top-3 sm:text-xl">
               📌
             </span>
           </div>
@@ -122,8 +156,7 @@ export default function Navbar() {
           {/* Name */}
           <div className="leading-none">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-medium tracking-wide text-[#8b7267] sm:text-sm">
-                angel&apos;s little
+              <span className="text-[10px] font-medium tracking-wide text-[#8b7267] sm:text-sm">                angel&apos;s little
               </span>
 
               <span className="text-base text-pink-400 sm:text-lg">
@@ -131,8 +164,7 @@ export default function Navbar() {
               </span>
             </div>
 
-            <div className="mt-1 text-xl font-black tracking-wide text-[#f19aaa] sm:text-2xl">
-              PINBOARD
+            <div className="mt-0.5 text-base font-black tracking-wide text-[#f19aaa] sm:mt-1 sm:text-2xl">              PINBOARD
             </div>
           </div>
         </Link>

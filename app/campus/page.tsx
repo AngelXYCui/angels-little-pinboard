@@ -606,6 +606,28 @@ useEffect(() => {
                   transformOrigin: "top left",
                 }}
               >
+                <div
+            className="
+                pointer-events-none
+                absolute
+                left-1/2
+                top-0
+                z-20
+                -translate-x-1/2
+                -translate-y-full
+                whitespace-nowrap
+                rounded-full
+                border border-pink-100
+                bg-[#fffaf7]/95
+                px-2 py-0.5
+                text-[10px]
+                font-bold
+                text-[#f19aaa]
+                shadow-sm
+            "
+            >
+            you ♡
+            </div>
                 <Avatar
                   hair={hair}
                   shirt={shirt}
