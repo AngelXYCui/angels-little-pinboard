@@ -164,7 +164,8 @@ export default function Navbar() {
               </span>
             </div>
 
-            <div className="mt-0.5 text-base font-black tracking-wide text-[#f19aaa] sm:mt-1 sm:text-2xl">              PINBOARD
+            <div className="mt-1 text-xl font-black tracking-wide text-[#f19aaa] sm:text-2xl">
+              PINBOARD
             </div>
           </div>
         </Link>

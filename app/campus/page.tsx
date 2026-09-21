@@ -576,83 +576,85 @@ useEffect(() => {
             </div>
           ))}
 
-          {/* Your avatar - ONLY visible if spawned on Campus */}
           {currentLocation === "campus" && (
             <div
-              className={`
+                className={`
                 absolute z-20
                 touch-none select-none
                 ${
-                  dragging
+                    dragging
                     ? "cursor-grabbing"
                     : "cursor-grab"
                 }
-              `}
-              style={{
+                `}
+                style={{
                 left: `${position.x}%`,
                 top: `${position.y}%`,
                 width: "95px",
                 height: "130px",
-              }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
+                }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
             >
-              <div
+                {/* You badge */}
+                <div
+                className="
+                    pointer-events-none
+                    absolute z-30
+                    whitespace-nowrap
+                    rounded-full
+                    border border-pink-100
+                    bg-[#fffaf7]/95
+                    px-2 py-0.5
+                    text-[9px]
+                    font-bold
+                    text-[#f19aaa]
+                    shadow-sm
+                "
+                style={{
+                    left: "47.5px",
+                    top: "-17px",
+                    transform: "translateX(-50%)",
+                }}
+                >
+                you ♡
+                </div>
+
+                {/* Avatar — only this gets scaled */}
+                <div
                 className="pointer-events-none"
                 style={{
-                  transform: "scale(0.45)",
-                  transformOrigin: "top left",
+                    transform: "scale(0.45)",
+                    transformOrigin: "top left",
                 }}
-              >
-                <div
-            className="
-                pointer-events-none
-                absolute
-                left-1/2
-                top-0
-                z-20
-                -translate-x-1/2
-                -translate-y-full
-                whitespace-nowrap
-                rounded-full
-                border border-pink-100
-                bg-[#fffaf7]/95
-                px-2 py-0.5
-                text-[10px]
-                font-bold
-                text-[#f19aaa]
-                shadow-sm
-            "
-            >
-            you ♡
-            </div>
+                >
                 <Avatar
-                  hair={hair}
-                  shirt={shirt}
-                  skinTone={skinTone}
-                  hairstyle={hairstyle}
+                    hair={hair}
+                    shirt={shirt}
+                    skinTone={skinTone}
+                    hairstyle={hairstyle}
                 />
-              </div>
+                </div>
 
-              {/* Your username */}
-              <div
+                {/* Your username */}
+                <div
                 className="
-                  pointer-events-none
-                  absolute left-[47px] top-[112px]
-                  -translate-x-1/2
-                  whitespace-nowrap
-                  rounded-full bg-white/90
-                  px-2 py-1
-                  text-xs font-semibold text-[#806b67]
-                  shadow-sm
+                    pointer-events-none
+                    absolute left-[47px] top-[112px]
+                    -translate-x-1/2
+                    whitespace-nowrap
+                    rounded-full bg-white/90
+                    px-2 py-1
+                    text-xs font-semibold text-[#806b67]
+                    shadow-sm
                 "
-              >
+                >
                 {username}
-              </div>
+                </div>
             </div>
-          )}
+            )}
 
           {/* Map label */}
           <div
