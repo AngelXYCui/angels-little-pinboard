@@ -635,8 +635,7 @@ useEffect(() => {
                     {/* Scaled lounge world wrapper */}
             <div
             ref={loungeWorldWrapperRef}
-            className="mt-7 w-full overflow-hidden"
-            style={{
+            className="mt-7 w-full overflow-hidden md:overflow-visible"            style={{
                 height: `${LOUNGE_WORLD_HEIGHT * loungeScale}px`,
             }}
             >
