@@ -64,6 +64,42 @@ export default function DormLounge({
   >([]);
 
   const loungeRef = useRef<HTMLDivElement>(null);
+  const loungeWorldWrapperRef = useRef<HTMLDivElement>(null);
+
+const LOUNGE_WORLD_WIDTH = 1024;
+const LOUNGE_WORLD_HEIGHT = 600;
+
+const [loungeScale, setLoungeScale] = useState(1);
+
+useEffect(() => {
+  function updateLoungeScale() {
+    const wrapper = loungeWorldWrapperRef.current;
+    if (!wrapper) return;
+
+    const availableWidth = wrapper.clientWidth;
+
+    setLoungeScale(
+      Math.min(
+        1,
+        availableWidth / LOUNGE_WORLD_WIDTH
+      )
+    );
+  }
+
+  updateLoungeScale();
+
+  window.addEventListener(
+    "resize",
+    updateLoungeScale
+  );
+
+  return () => {
+    window.removeEventListener(
+      "resize",
+      updateLoungeScale
+    );
+  };
+}, []);
 
   /*
    * Check whether we entered through
@@ -512,7 +548,30 @@ export default function DormLounge({
   }
 
   return (
-    <main className="min-h-screen p-10">
+  <>
+    {/* Narrow portrait phones */}
+    <div className="flex min-h-screen items-center justify-center px-6 sm:hidden landscape:hidden">
+      <div className="text-center">
+        <div className="text-5xl">↻</div>
+
+        <h1 className="mt-5 text-2xl font-bold text-[#6f5c56]">
+          more room please! ♡
+        </h1>
+
+        <p className="mt-3 text-sm font-semibold leading-6 text-[#a18a82]">
+          turn your phone sideways
+          <br />
+          to hang out in the lounge
+        </p>
+
+        <div className="mt-5 text-3xl">
+          📱
+        </div>
+      </div>
+    </div>
+
+    {/* Lounge */}
+    <main className="hidden min-h-screen px-3 py-5 sm:block sm:p-10 landscape:block">
       <div className="mx-auto max-w-5xl">
 
         {/* Heading */}
@@ -573,13 +632,24 @@ export default function DormLounge({
             </button>
           )}
 
-        {/* Interactive Area */}
-        <div
-          className="relative mt-7 h-[540px] w-full"
-          onClick={() =>
-            setSelectedUserId(null)
-          }
-        >
+                    {/* Scaled lounge world wrapper */}
+            <div
+            ref={loungeWorldWrapperRef}
+            className="mt-7 w-full overflow-hidden"
+            style={{
+                height: `${LOUNGE_WORLD_HEIGHT * loungeScale}px`,
+            }}
+            >
+            {/* Fixed virtual lounge world */}
+            <div
+                className="relative h-[600px] w-[1024px] origin-top-left"
+                style={{
+                transform: `scale(${loungeScale})`,
+                }}
+                onClick={() =>
+                setSelectedUserId(null)
+                }
+            >
 
           {/* YOUR AVATAR */}
           {!loading &&
@@ -619,14 +689,16 @@ export default function DormLounge({
 
                   avatar.dataset.offsetX =
                     (
-                      event.clientX -
-                      avatarRect.left
+                        (event.clientX -
+                        avatarRect.left) /
+                        loungeScale
                     ).toString();
 
-                  avatar.dataset.offsetY =
+                    avatar.dataset.offsetY =
                     (
-                      event.clientY -
-                      avatarRect.top
+                        (event.clientY -
+                        avatarRect.top) /
+                        loungeScale
                     ).toString();
                 }}
                 onPointerMove={(
@@ -667,15 +739,17 @@ export default function DormLounge({
 
                   setPosition({
                     x:
-                      event.clientX -
-                      parentRect.left -
-                      offsetX,
+                        (event.clientX -
+                        parentRect.left) /
+                        loungeScale -
+                        offsetX,
 
                     y:
-                      event.clientY -
-                      parentRect.top -
-                      offsetY,
-                  });
+                        (event.clientY -
+                        parentRect.top) /
+                        loungeScale -
+                        offsetY,
+                    });
                 }}
                 onPointerUp={async (
                   event
@@ -1174,7 +1248,9 @@ export default function DormLounge({
             </div>
           </div>
         </div>
-      </div>
-    </main>
-  );
+    </div>
+    </div>
+  </main>
+</>
+);
 }

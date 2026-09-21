@@ -21,6 +21,30 @@ export default function CampusPage() {
   const supabase = createClient();
   const router = useRouter();
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+
+const [mapScale, setMapScale] = useState(1);
+
+useEffect(() => {
+    function updateMapScale() {
+    const virtualWidth = 1152;
+
+    // Actual horizontal space available on screen
+    const availableWidth = window.innerWidth - 24;
+
+    setMapScale(
+        Math.min(1, availableWidth / virtualWidth)
+    );
+    }
+
+  updateMapScale();
+
+  window.addEventListener("resize", updateMapScale);
+
+  return () => {
+    window.removeEventListener("resize", updateMapScale);
+  };
+}, []);
 
   const [userId, setUserId] = useState("");
 
@@ -287,17 +311,37 @@ export default function CampusPage() {
   }
 
   if (loading) {
-    return (
-      <main className="min-h-screen p-10">
-        <p className="font-semibold text-[#a18a82]">
-          Loading North Campus... ♡
-        </p>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen p-10">
+      <p className="font-semibold text-[#a18a82]">
+        Loading North Campus... ♡
+      </p>
+    </main>
+  );
+}
+
+  return (
+  <>
+    {/* Narrow portrait phones */}
+    <div className="flex min-h-screen items-center justify-center px-6 sm:hidden landscape:hidden">
+      <div className="text-center">
+        <div className="text-5xl">↻</div>
+
+        <h1 className="mt-5 text-2xl font-bold text-[#6f5c56]">
+          more room please! ♡
+        </h1>
+
+        <p className="mt-3 text-sm font-semibold leading-6 text-[#a18a82]">
+          turn your phone sideways
+          <br />
+          to explore campus
+        </p>
+
+      </div>
+    </div>
+
+    {/* Campus */}
+    <main className="hidden min-h-screen px-3 py-5 sm:block sm:p-10 landscape:block">
       <div className="mx-auto max-w-6xl">
 
         {/* Page heading */}
@@ -337,18 +381,31 @@ export default function CampusPage() {
           )}
         </div>
 
-        {/* Campus map */}
+        {/* Campus map scaling wrapper */}
         <div
-          ref={mapRef}
-          className="
-            relative mx-auto mt-8
-            h-[650px] w-full
+        ref={mapWrapperRef}
+        className="mx-auto mt-8 w-full"
+        style={{
+            height: `${650 * mapScale}px`,
+        }}
+        >
+        {/* Fixed virtual Campus world */}
+        <div
+        ref={mapRef}
+        className="
+            relative
+            h-[650px] w-[1152px]
+            origin-top-left
             overflow-hidden rounded-[40px]
             border-4 border-white
             bg-[#e8f5e9]
             shadow-xl
-          "
+        "
+        style={{
+            transform: `scale(${mapScale})`,
+        }}
         >
+        
 
           {/* Morrison Dining */}
           <button
@@ -369,7 +426,7 @@ export default function CampusPage() {
           {/* Low Rise 6 */}
 <button
   type="button"
-  onClick={() => router.push("/dorm/low-rise-6")}
+  onClick={() => router.push("/dorm/low-rise-6?spawn=true")}
   className="
     group
     absolute left-[55%] top-[8%]
@@ -590,7 +647,9 @@ export default function CampusPage() {
             North Campus · Cornell University
           </div>
         </div>
-      </div>
+        </div> {/* scaling wrapper */}
+        </div>
     </main>
+  </>
   );
 }
